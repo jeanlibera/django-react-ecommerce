@@ -1,0 +1,363 @@
+------------------------------------------------------
+Section 1 - Introduction
+Section 2 - Starting the Front End
+------------------------------------------------------
+
+2. Prerequisites and Setup
+--------------------------
+react
+
+website: www.buildproshop.com
+https://github.com/divanov11/proshop_django
+
+environment setup
+* github repo
+* nodejs (nodejs.org)
+* postman
+* vscode with these extensions:
+  * es7 react/redux/graphql/react-native snippets by dsznajder
+  * bracket pair colorizer (now part of VSCode, it's a configuration setting)
+  * auto rename tag by jun han
+  * prettier - code formatter by prettier
+
+5. React Setup
+--------------
+
+I installed the latest version of nodejs, from nodejs.org
+
+I read through this tutorial about react.
+https://reactjs.org/tutorial/tutorial.html
+
+Here is another tutorial that I didn't do.
+https://www.taniarascia.com/getting-started-with-react/
+
+React setup is documented here:
+https://reactjs.org/docs/create-a-new-react-app.html
+
+To install react, go to the root of your repo and type:
+
+npx create-react-app frontend
+cd frontend
+npm start
+
+We are going to be building a single page application.
+Everything is loaded from /frontend/public/index.html.
+
+That file has this:
+<div id="root"></div>
+
+We are going to create components that look like pages.
+When we change a page or click on a new link, that component will be loaded into this "root" div.
+But we aren't actually going to a new page.
+
+This code, in /frontend/src/index.js, is how the page is loaded:
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+Another way to do it (in the video) is:
+ReactDOM.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+  document.getElementById('root')
+)
+
+The <App /> is referring to our top-level App component, defined in 
+\frontend\src\App.js
+
+For index.html, any reference to "%PUBLIC_URL%/favicon.ico" needs to be in the \frontend\public folder.
+For example, favicon.ico needs to be in \frontend\public.
+
+6. Reach-Bootstrap Setup, Header & Footer Components
+----------------------------------------------------
+
+I installed ES7+ React/Redux/React-Native snippets by dsznajder
+
+We are defining Header and Footer components.
+Each are in js files within a src\components folder.
+
+* app.js
+* components (folder)
+  * Header.js
+  * Footer.js
+  
+Within Header.js is this code:
+
+import React from 'react'
+
+function Header() {
+  return (
+    <div>
+        <header>Header</header>
+    </div>
+  )
+}
+
+export default Header
+
+Since the function name is Header, the name of the component is Header.
+Since the file is named Header.js, we import it from App.js with this:
+import Header from './components/Header'
+
+Within App.js, we changed to:
+function App() {
+  return (
+    <div className="App">
+      <Header />
+      <main>
+        <h1>Welcome</h1>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+To simplify the tutorial, we are going to use React-Bootstrap for styling.
+Go to: https://bootswatch.com/
+
+We are going to pick the LUX theme. Download bootstrap.min.css
+Put it in \src, and refer to it in index.js:
+import './bootstrap.min.css';
+
+Next, we go here, to get react-bootstrap components:
+https://react-bootstrap.github.io/
+
+We run:
+npm install react-bootstrap
+which adds react-bootstrap to packages.json.
+The command needs to be run from within our frontend folder, because that's where packages.json is.
+
+For the footer, we are adding tags from bootstrap.min.css.
+For the header, we want to add a component. Go to 
+https://react-bootstrap.github.io/ and click on Components. 
+Then click on NavBar. Copy the code and alter it.
+
+Now get a font. We want to use font-awesome. Go to:
+https://cdnjs.com/
+Search for font-awesome.
+Click on the link tag </>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" integrity="sha512-xh6O/CkQoPOWDdYTDqeRdPCVd1SpvCA9XXcUnZS2FmJNp1coAFzvtCN9BmamE+4aHK8yyUHUSCcJHgXloTyT2A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+Paste that into index.html, in the <header> section.
+
+Then when you want to use an icon, you use the <i> element, like this:
+<LinkContainer to="/login">
+	<Nav.Link><i className="fas fa-user"></i>Login</Nav.Link>
+</LinkContainer>
+
+Are more complicated example with conditions, is shown at the end of this section.
+
+8. Rating Component
+-------------------
+
+https://reactjs.org/docs/components-and-props.html
+In react, the component has a props value, which contains all the properties.
+
+In this example, the Welcome component has a property, name:
+
+function Welcome(props) {
+  return <h1>Hello, {props.name}</h1>;
+}
+
+And then you call it like this:
+const element = <Welcome name="Sara" />;
+
+You could have multiple properties for a component, and each is accessible through props.
+The Rating component has 3 properties: value, text, color.
+
+You can do this:
+
+function Rating(props) {
+	# within the body, use
+	{props.value}
+	{props.text}
+	{{props.color}}
+}
+
+But you can also do this:
+
+function Rating({value, text, color}) {
+	# within the body, use
+	{value}
+	{text}
+	{{color}}
+}
+
+Also, apparently this is a way to only show text if it exists,
+and if it doesn't exist it will be empty
+
+<span>{text && text}</span>
+
+But this also seemed to work:
+
+<span>{text}</span>
+
+8. Implementing React Router
+----------------------------
+
+Run this, to install both:
+npm install react-router-dom react-router-bootstrap
+
+With React 6, it's a little different than the video... see the comments.
+
+In App.js, do this at the top:
+
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+
+Then change App.js to specify <BrowserRouter>, <Routes>, and <Route>.
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Header />
+      <main className="py-3">
+        <Container>
+            <Routes>
+                <Route path='/' element={<HomeScreen/>} />
+            </Routes>
+        </Container>
+      </main>
+      <Footer />
+    </BrowserRouter>
+  );
+}
+
+Notice that in the video (v5), they are using 
+
+<Route path='/' component={<HomeScreen>} exact />
+
+In v6, use this instead:
+
+<Route path='/' element={<HomeScreen>} />
+
+* change "component" --> "element"
+* exact isn't needed
+
+We can change from href to various elements in react-router-dom which will "route" by switching components.
+
+In Product.js:
+
+import { Link } from 'react-router-dom'
+
+<a href={`/product/${product._id}`}>
+	<Card.Img src={product.image} />
+</'>
+
+-->
+
+<Link to={`/product/${product._id}`}>
+	<Card.Img src={product.image} />
+</Link>
+
+In Header.js:
+
+import { LinkContainer } from 'react-router-bootstrap'
+
+<Navbar.Brand href="/">ProShop</NavBrand>
+-->
+<LinkContainer to="/">
+	<Navbar.Brand>ProShop</Navbar.Brand>
+</LinkContainer>
+
+<Nav.Link href="/cart"><i className="fas fa-shopping-cart"></i>Cart</Nav.Link>
+-->
+<LinkContainer to="/cart">
+	<Nav.Link><i className="fas fa-shopping-cart"></i>Cart</Nav.Link>
+</LinkContainer>
+
+Similarly for converting href="/login"
+
+10. Product Details Screen
+--------------------------
+If the route includes a parameter, you get it with useParams.
+The route below has the parameter "id"
+
+<Routes>
+	...
+	<Route path='/product/:id' element={<ProductScreen/>} />
+</Routes>
+			
+In ProductScreen.js:
+import { useParams } from 'react-router-dom'			
+function ProductScreen() {
+    const params = useParams()
+    const product = products.find((p) => p._id === params.id)
+}
+	
+In react-bootstrap, a Row has 12 "parts". Each column can use some of the parts,
+and the total can't be more than 12.
+
+Example: 
+import { Col, Row } from 'react-bootstrap'
+
+function myFunc() {
+	...
+	<Row>
+		<Col md={6}>
+			... some content
+		</Col>
+		<Col md={3}>
+			... more content
+		</Col>
+		<Col md={3}>
+			... more content
+		</Col>
+	</Row>
+}
+
+Illustrating how to get content from object properties:
+
+<ListGroup.Item>
+	<h3>{product.name}</h3>
+</ListGroup.Item>
+
+<ListGroup.Item>
+	<Rating value={product.rating} 
+		text={`${product.numReviews} reviews`} color={'#fce825'} />
+</ListGroup.Item>
+
+Example of a condition in JSX:
+
+<Col>
+	{product.countInStock > 0 ? "In Stock" : "Out of Stock"}
+</Col>
+
+Here is another example, from Rating.js:
+
+<span>
+	<i style={{ color }}
+	   className={
+		 value >= 1 
+		 ? 'fas fa-star' 
+		 : value >= 0.5
+			? 'fas fa-star-half-alt'
+			: 'far fa-star'
+	}>
+	</i>
+	
+Another condition:
+
+<Button type="button" size="md"
+	disabled={product.countInStock === 0}>
+	Add to Cart
+</Button>
+
+
+Two ways to get a full-width button:
+
+<Button className="w-100" type="button"
+	disabled={product.countInStock === 0}>
+	Add to Cart
+</Button>
+
+<div className="d-grid gap-1">
+	<Button type="button" size="md"
+		disabled={product.countInStock === 0}>
+		Add to Cart
+	</Button>
+</div>
