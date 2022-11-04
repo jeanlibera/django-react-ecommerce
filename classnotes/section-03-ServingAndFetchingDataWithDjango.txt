@@ -1,0 +1,438 @@
+------------------------------------------------------
+Django Ecommerce React
+Section 3 - Serving & Fetching Data from Django
+------------------------------------------------------
+
+11. Frontend/Backend Workflow
+-----------------------------
+
+Django will be a separate project, running on Port 8000.
+The Frontend will still be running on Post 3000 with nodejs.
+
+Eventually we'll run a command, "Run Build", to turn the
+entire react project into a static fileset.
+Then we can add the static files into django.
+
+12. Building the Backend
+------------------------
+
+Set up our django project.
+Set up an API with dummy data.
+Make calls to the API from the frontend.
+Create the database.
+
+Create a virtual environment
+
+> python -m venv .venv
+
+Activate the virtual environment
+
+> pip install django
+
+Create the django project
+> django-admin startproject backend
+> cd backend
+> python manage.py runserver
+
+Create the django app
+> python manage.py startapp base
+
+In settings.py, add base to INSTALLED_APPS:
+INSTALLED_APPS = [
+    ....
+    'base.app.BaseConfig',
+]
+
+In base\views.py, add this:
+
+from django.http import JsonResponse
+
+def getRoutes(request):
+    return JsonResponse('Hello', safe=False)
+	
+Create base\urls.py:
+
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('base.urls')),
+]
+
+in the project urls.py:
+
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('api/', views.getRoutes, name="routes"),
+]
+
+We are going to use the django rest framework, 
+https://www.django-rest-framework.org/
+
+To install:
+pip install djangorestframework
+pip install markdown       # Markdown support for the browsable API.
+pip install django-filter  # Filtering support
+
+To configure, add rest-framework to the INSTALLED_APPS:
+INSTALLED_APPS = [
+    ...
+    'rest_framework',
+]
+
+To use the browsable API:
+urlpatterns = [
+    ...
+    path('api-auth/', include('rest_framework.urls'))
+]
+
+We are going to be using function based views.
+
+When using djangorestframework, we switch from
+
+from django.http import JsonResponse
+
+def getRoutes(request):
+    return JsonResponse('Hello', safe=False)
+	
+-->
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+@api_view(['GET'])
+def getRoutes(request):
+	routes = [
+        '/api/products/',
+        '/api/products/create/',
+		...
+	]
+    return Response(routes)
+
+To implement getProducts() and getProduct() are not much harder:
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+from .products import products
+
+@api_view(['GET'])
+def getProducts(request):
+    return Response(products)
+	
+@api_view(['GET'])
+def getProduct(request, product_id):
+    print(f"Starting views.getRoutes() request, product_id={product_id}")
+    product = None
+    for one_product in products:
+        if one_product['_id'] == product_id:
+            product = one_product
+            break
+    return Response(product)
+
+13. Fetching Data
+-----------------
+
+We need to get both servers running, the nodejs server for react and django server for django.
+For django, it's just this, which you run from the backend folder:
+> python manage.py runserver
+
+For nodejs, we start it with 
+> npm start
+
+But we know that we are going to be calling API methods in django, and we want to use Axios for that.
+Axios is an HTTP client library.
+So we need to import Axios. 
+We will import Axios like this:
+> npm install axios
+(Alternative techonologies mentioned for importing Axios are Fetch and Ajax.)
+
+So to import Axios:
+> cd frontend (frontend folder with package.json)
+> npm install axios
+
+Now in HomeScreen.js, let's use our django REST api.
+
+import axios from 'axios'
+import React, { useState, useEffect } from 'react'
+
+we want useEffect() to get triggered when the component first loads.
+	
+products is our products array.
+To populate products, we need to use useEffect
+useEffect is loaded/triggered every single time the component loads,
+or when a state attribute or value gets updated.
+When want it to be triggered when the component first loads.
+Since we only want this to be updated when the component loads, not when a state property is updated,
+we pass an empty array to useEffect.
+Inside useEffect(), we will use axios to make the call and load in data.
+By the way, to see the message, look in chrome console.
+
+function HomeScreen() {
+    const [products, setProducts] = useState([])
+	useEffect(() => {
+		console.log("UseEffect triggered")
+		axios.get('http://127.0.0.1:8000/api/products')
+	}, []);
+	
+	return (
+	...
+	
+Note: We would like to use 
+	axios.get('/api/products')
+But that requires some configuration that will be done later.
+
+axios.get('http://127.0.0.1:8000/api/products') 
+returns a promise.
+
+The old-school way to handle this is:
+axios.get('http://127.0.0.1:8000/api/products').then(response) ...
+
+But we are going to use async/await.
+We want to use
+const { data } = await axios.get('http://127.0.0.1:8000/api/products')
+
+In order to use await, we need to wrap the call inside an async function.
+
+What we are going to do is, declare that function inside useEffect():
+
+function HomeScreen() {
+    const [products, setProducts] = useState([])
+
+    useEffect(() => {
+        console.log("UseEffect triggered")
+        async function fetchProducts() {
+            const { data } = await axios.get('http://127.0.0.1:8000/api/products')
+            setProducts(data)
+        }
+        fetchProducts()
+	}, [])
+
+    return (
+	...
+
+Now, we see this error:
+Access to XMLHttpRequest at 'http://127.0.0.1:8000/api/products' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+
+CORS is Cross-Origin Resource Sharing.
+It means django is blocking the call because it doesn't recognize it.
+To fix it, we need to configure Django to allow it.
+
+We need to install django-cors-headers on the django project.
+There's documentation for this on pypi.org.
+
+> cd backend (the outer backend folder)
+> pip install django-cors-headers
+
+There's other configuration, documented on the django-cors-headers page.
+
+Anyway, here is a summary of what's going on here
+
+Because of this line:
+	const [products, setProducts] = useState([]);
+	
+When setProducts() is called, the value that json/api data passed in will be set to the value of "products".
+
+Because of the code below:
+    useEffect(() => {
+        console.log("UseEffect triggered");
+        async function fetchProducts() {
+            const { data } = await axios.get('/api/products');
+            setProducts(data);
+        }
+        fetchProducts();
+	}, [])
+	
+useEffect() will be called once at startup. And the function that it defines can
+call the function (setProducts) and then set the value (products) becaues of useState.
+	
+
+To change the url from
+axios.get('http://127.0.0.1:8000/api/products')
+--> 
+axios.get('/api/products')
+
+We defined "proxy" in package.json:
+
+{
+  "name": "frontend",
+  "proxy": "http://127.0.0.1:8000",
+  ...
+  
+What we do in ProductScreen.js is similar:
+
+function ProductScreen() {
+    const params = useParams();
+
+    const [product, setProduct] = useState([]);
+
+    useEffect(() => {
+        console.log("UseEffect triggered");
+        console.log(`The id is ${params.id}`);
+
+        async function fetchProduct() {
+            const { data } = await axios.get(`/api/products/${params.id}`)
+            setProduct(data)
+        }
+        fetchProduct();
+	}, [])
+	
+useParams() gives us access to the parameters in the route. 
+The route is generated by a link in Product.js:
+	<Link to={`/product/${product._id}`}>
+and then passed on by the url route in App.js:
+	<Route path='/product/:id' element={<ProductScreen/>} />
+	
+The way to access the param (id), or any other parameter, is to use
+	const params = useParams()
+	
+Then when calling axios.get, we add params.id to the url:
+	const { data } = await axios.get(`/api/products/${params.id}`)
+	
+14. Database Setup & Admin Panel
+--------------------------------
+This website can be used to draw SQL diagrams.
+https://drawsql.app/
+
+We will be using sqlite, which comes by default.
+The configuration is in settings.py:
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
+What we have to do, to create the database, is to apply a migration.
+And out of the box, there are backend migrations that need to be applied.
+Django warns you about them. So let's do it:
+
+python manage.py migrate
+
+We are going to define the database tables in <base>\models.py.
+Each class defined in this file becomes a database table.
+And Django already has a User table, so we don't have to define that one.
+
+Classes: User, Product, Order, OrderItem, Review, ShippingAddress
+
+Relationships:
+1 User <---> n Products    ... a user can define/build out multiple products
+1 Product <---> n Reviews  ... a product can have multiple reviews
+1 User <---> n Reviews     ... a user can write multiple reviews on different products
+1 User <---> n Orders      ... a user can place multiple orders. order = shopping cart.
+1 Order <---> n OrderItems ... an order can have multiple items in it.
+n OrderItems <---> 1 Product ... a product can be an item on many orders
+1 ShippingAddress <---> 1 Order ... an order must have 1 shipping address
+
+Before building out any models, let's go into the admin panel.
+Run this command to create a superuser:
+	
+python manage.py createsuperuser	
+Username: jean
+Email address: jeanlibera@gmail.com
+Password: Test1234!
+	
+15. Modeling our data
+---------------------
+The User model is already defined, but we have to import it.
+from django.contrib.auth.models import User
+
+class Product(models.Model):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+	
+ForeignKey means, 1-n relationship (1 User, n Products).
+  From the perspective of Product, each Product refers to its User by _id,
+  and multiple Products can refer to the same User.
+on_delete=models.SET_NULL means, if the User is deleted, you set the value of user to NULL.
+null=True means, NULLs are allowed in the column.
+
+class Product(models.Model):
+    ...
+    _id = models.AutoField(primary_key=True, editable=False)
+	
+By default, Django creates a primary key named "id". But we are specifying a primary key
+named "_id" instead, because this is a remake of an existing course that used "_id" 
+for the primary key. We will do this for most tables, but not for User, where Django
+already created "id" as the primary key.
+
+run:
+python manage.py makemigrations
+python manage.py showmigrations
+python manage.py migrate
+
+After creating the Product class in models.py, we need to register it with the admin panel.
+
+In admin.py:
+
+from .models import Product
+
+admin.site.register(Product)
+
+16. Product Image Field
+-----------------------
+For the Product Image Field,
+image = models.ImageField(null=True, blank=True)
+
+we need to add pillow.
+
+pip install Pillow
+
+17. Static Files
+----------------
+We are going to create a static folder. It will be inside the backend project,
+at the highest level.
+Normally, the static folder looks like this:
+
+* static   (folder)
+  * css    (folder)
+  * images (folder)
+  * js     (folder)
+  
+We need to configure this in settings.py:
+
+BASE_DIR is defined early in settings.py. For static directory:
+
+STATICFILES_DIRS = [ 
+    BASE_DIR / 'static' 
+]
+
+To let django know where to upload images, we need to configure MEDIA_ROOT.
+This is for user-uploaded files.
+
+MEDIA_ROOT = 'static/images'
+
+To render the images, we also need to set
+STATIC_URL = '/static/'
+MEDIA_URL = '/images/'
+
+To actually set the url paths, go to backend\urls.py
+
+18. Serializing Data
+--------------------
+We need to create a serializer which will turn our models into json.
+
+Create a new class, serializers.py:
+
+from rest_framework import serializers
+from django.contrib.auth.models import User
+from .models import Product
+
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = '__all__'
+		
+Then in views.py:
+
+from .models import Product
+from .serializers import ProductSerializer
+
+@api_view(['GET'])
+def getProducts(request) -> Response:
+    products = Product.objects.all()
+    serializer = ProductSerializer(products, many=True)
+    return Response(serializer.data)

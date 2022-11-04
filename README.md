@@ -11,7 +11,7 @@ Based on the following tutorial:
 
 See https://code.visualstudio.com/docs/python/tutorial-django for more details.
 
-If you have opened the "django-learning" repo
+If you have opened the "django-react-ecommerce" repo
 as your workspace folder in VSCode, then this is the configuration
 you will want:
 
@@ -19,7 +19,7 @@ you will want:
             "name": "Python: Django",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/jobapp/manage.py",
+            "program": "${workspaceFolder}/backend/manage.py",
             "args": [
                 "runserver",
             ],

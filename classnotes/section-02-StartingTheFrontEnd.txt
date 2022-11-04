@@ -1,4 +1,5 @@
 ------------------------------------------------------
+Django Ecommerce React
 Section 1 - Introduction
 Section 2 - Starting the Front End
 ------------------------------------------------------

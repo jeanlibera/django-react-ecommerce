@@ -1,0 +1,39 @@
+------------------------------------------------------
+Section 4 - Implementing Redux for State Management
+------------------------------------------------------
+
+19. An Overview of Redux
+------------------------
+
+documentation on basic concepts - redux.js.org/glossary
+
+Two kinds of state:
+Component level state -- has to do with a specific component
+  example: a slider or dropdown menu. Open could be true or false.
+Global state, or Application state
+  example: an authenticated user, shopping cart item, orders
+
+Redux is for application or global state
+Our products are going to be used in multiple components.
+
+Another possibility is to save your state in an App.js file and pass it around
+through props, but that is frowned upon.
+
+Terminology from the diagram
+
+Components - react components
+Server - our back-end django server
+Reducer - state is changes through reducer functions
+  These are functions that accept Actions and pass the state down to components
+  The Reducer converts the payload data in the Action into a state.
+  Multiple components can ask for the same piece of state.
+Actions - objects that represent the intention to change a piece of state.
+  Action creators - functions that fire off the actions
+  Example: an action creator function, getProducts(). In that action creator,
+  way make a call to fetch data and then dispatch an Action to the Reducer.
+  The Action has a payload with the fetched data.
+  
+State is like a cloud hanging over your application.
+
+Redux is not specifically attached to React.
+You can use redux on its own or with other frameworks.
