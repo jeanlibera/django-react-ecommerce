@@ -74,7 +74,7 @@ The <App /> is referring to our top-level App component, defined in
 For index.html, any reference to "%PUBLIC_URL%/favicon.ico" needs to be in the \frontend\public folder.
 For example, favicon.ico needs to be in \frontend\public.
 
-6. Reach-Bootstrap Setup, Header & Footer Components
+6. React-Bootstrap Setup, Header & Footer Components
 ----------------------------------------------------
 
 I installed ES7+ React/Redux/React-Native snippets by dsznajder

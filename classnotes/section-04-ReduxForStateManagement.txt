@@ -1,4 +1,5 @@
 ------------------------------------------------------
+Django Ecommerce React
 Section 4 - Implementing Redux for State Management
 ------------------------------------------------------
 
@@ -37,3 +38,385 @@ State is like a cloud hanging over your application.
 
 Redux is not specifically attached to React.
 You can use redux on its own or with other frameworks.
+
+20. Create Redux Store
+----------------------
+Add the Redux DevTools extension to your browser (Chrome or Edge)
+
+What that does is, when you are in your browser and you open DevTools (F12),
+you'll see a Redux tab within the DevTools.
+
+Install npm packages for using redux
+npm install redux
+npm install react-redux  -- connects react and redux
+npm install redux-thunk  -- allows you to make async requests from action creators
+npm install redux-devtools-extension -- connects the store to the browser extension
+npm install @reduxjs/toolkit
+
+Now, create the store.
+In frontend\src, create store.js
+I think this is a cumulative store.
+
+import { configureStore, combineReducers } from '@reduxjs/toolkit'
+import thunk from 'redux-thunk'
+
+const reducer = combineReducers({});
+
+const initialState = {};
+
+const middleware = [thunk];
+
+const store = configureStore({
+    reducer: reducer,
+    preloadedState: initialState, 
+    middleware: middleware
+});
+
+export default store;
+
+Then in index.js, add this:
+
+import { Provider } from 'react-redux'
+import store from './store'
+
+root.render(
+  <React.StrictMode>
+    <Provider store={store}>
+        <App />
+    </Provider>
+  </React.StrictMode>
+);
+
+21. Product List Reducer & Action
+---------------------------------
+A reducer takes in the current state and action type and does something with the state.
+For example, the action would be LoadData.
+It returns a new copy with tweaked data, and updates it in the store.
+
+I defined constants in productConstants.js:
+export const PRODUCT_LIST_REQUEST = 'PRODUCT_LIST_REQUEST';
+export const PRODUCT_LIST_SUCCESS =  'PRODUCT_LIST_SUCCESS';
+export const PRODUCT_LIST_FAIL = 'PRODUCT_LIST_FAIL';
+
+I defined a productListReducer:
+
+import {
+    PRODUCT_LIST_REQUEST,
+    PRODUCT_LIST_SUCCESS,
+    PRODUCT_LIST_FAIL
+} from '../constants/productConstants'
+
+// the list of reducers (there will be multiple reducers)
+// action contains the action type.
+export const productListReducer = (state={products:[]}, action) => {
+    console.log("Starting productListReducer")
+    console.log(action.type)
+    switch(action.type) {
+        case PRODUCT_LIST_REQUEST:
+            // products are loading
+            return { loading:true, products:[] }
+
+        case PRODUCT_LIST_SUCCESS:
+            // the api call to get products returned the data
+            return { loading:false, products:action.payload }
+
+        case PRODUCT_LIST_FAIL:
+            // the api call failed
+            return { loading:false, error: action.payload }
+
+        default:
+            // there are many other system action types, e.g. one for init
+            return state
+    }
+};
+
+This productListReducer is initialized in index.js:
+-----------------
+
+import { productListReducer } from './reducers/productReducers.js'
+
+const reducer = combineReducers({
+   productList: productListReducer,
+});
+
+const store = configureStore({
+    reducer: reducer,
+    preloadedState: initialState, 
+    middleware: middleware
+});
+
+This productAction is defined in productActions.js:
+-----------------------
+It uses its dispatch parameter, to trigger the productListReducer
+
+import  axios from 'axios'
+import {
+    PRODUCT_LIST_REQUEST,
+    PRODUCT_LIST_SUCCESS,
+    PRODUCT_LIST_FAIL
+} from '../constants/productConstants'
+
+// will replace the API call made in HomeScreen.js
+// HomeScreen.js will trigger this action
+// async () => requires the use of redux-thunk.
+export const listProducts = () => async (dispatch) => {
+    try {
+        // trigger the productListReducer, to initialize to loading and product[]
+        dispatch({ type: PRODUCT_LIST_REQUEST })
+
+        const { data } = await axios.get('/api/products');
+
+        // trigger the productListReducer, to set product[] to the received data
+        dispatch({
+            type: PRODUCT_LIST_SUCCESS, 
+            payload: data
+        })
+    } catch (error) {
+        dispatch({
+            type: PRODUCT_LIST_FAIL, 
+            payload: error.response && 
+                error.response.data.message 
+                    ? error.response.data.message
+                    : error.message
+        });
+    }
+}
+
+21. Bringing Redux Into Home Screen
+-----------------------------------
+To use our productAction and productReducer in the Home Screen,
+we use useDispatch() to get the dispatcher.
+
+dispath = useDispatch()
+
+Then we call the productAction:
+
+    useEffect(() => {
+        dispatch(listProducts())
+	}, [dispatch])
+
+Notes that "dispatch" has to be added to the dependency array which is 
+the 2nd argument to useEffect()
+
+old HomeScreen.js:
+------------------
+function HomeScreen() {
+    const [products, setProducts] = useState([]);
+
+    useEffect(() => {
+        console.log("UseEffect triggered");
+        async function fetchProducts() {
+            const { data } = await axios.get('/api/products');
+            setProducts(data);
+        }
+        fetchProducts();
+	}, [])
+	
+    return (
+        <div>
+            <h1>Latest Products</h1>
+            <Row>
+                {products.map(product => (
+                    <Col key={product._id} sm={12} md={6} lg={4} xl={3}>
+                        <Product product={product} />
+                    </Col>
+                ))}
+            </Row>
+        </div>
+    )
+}
+	
+new HomeScreen.js:
+------------------
+import { useDispatch, useSelector } from 'react-redux'
+import { listProducts } from '../actions/productActions'
+
+function HomeScreen() {
+    const dispatch = useDispatch()
+    const productList = useSelector(state => state.productList)
+    const {error, loading, products} = productList
+
+    useEffect(() => {
+        dispatch(listProducts())
+	}, [dispatch])
+
+    return (
+        <div>
+            <h1>Latest Products</h1>
+            {loading ? <h2>Loading...</h2>
+                : error ? <h3>{error}</h3> 
+                :
+                <Row>
+                    {products.map(product => (
+                        <Col key={product._id} sm={12} md={6} lg={4} xl={3}>
+                            <Product product={product} />
+                        </Col>
+                    ))}
+                </Row>
+        }
+        </div>
+    )
+}
+
+23. Message & Loader Component
+------------------------------
+We are going to add a component to indicate the component is loading.
+Also, we are going to use a react-bootstrap Spinner component.
+
+For the error message, we will use a react-bootstrap Alert message.
+
+Loader.js (the Loader component)
+---------
+import { Spinner } from 'react-bootstrap';
+
+function Loader() {
+  return (
+    <Spinner 
+        animation='border' 
+        role='status' 
+        style={{
+            height:'100px',
+            width:'100px',
+            margin:'auto',
+            display:'block'
+        }}>
+        <span classname='visually-hidden'>Loading...</span>
+    </Spinner>
+  )
+}
+
+export default Loader;
+
+To use the Loader:
+------------------
+import Loader from '../components/Loader'
+    return ( 
+		...
+		<Loader />
+		...
+	)
+
+Message.js (the Message component)
+----------
+import { Alert } from 'react-bootstrap';
+
+function Message({variant, children}) {
+  return (
+    <Alert variant={variant}>
+        {children}
+    </Alert>
+  )
+}
+
+export default Message;
+
+To use the Message:
+------------------
+import Message from '../components/Message'
+    return ( 
+		...
+		<Message variant='danger'>{error}</Message> 
+		...
+	)
+
+Notice that {variant} is a normal attribute,
+but {children} is special, it refers to the child elements for the component.
+
+24. Product Details Reducer & Action
+------------------------------------
+In productActions.js, create an Action with a parameter, the id.
+---------------------
+// ProductScreen.js will trigger this action
+// async () => requires the use of redux-thunk.
+export const getProductDetails = (id) => async (dispatch) => {
+    try {
+        // trigger the productListReducer, to initialize to loading and product[]
+        dispatch({ type: PRODUCT_DETAILS_REQUEST })
+
+        const { data } = await axios.get(`/api/products/${id}`);
+
+        // trigger the productDetailsReducer, to set product to the received data
+        dispatch({
+            type: PRODUCT_DETAILS_SUCCESS, 
+            payload: data
+        })
+    } catch (error) {
+        dispatch({
+            type: PRODUCT_DETAILS_FAIL, 
+            payload: error.response && 
+                error.response.data.message 
+                    ? error.response.data.message
+                    : error.message
+        });
+    }
+}
+
+In productReducers.js, create a reducer for product details.
+---------------------
+This handles the results of the action.
+export const productDetailsReducer = (state = {product: {reviews:[]} }, action) => {
+    console.log("Started productListReducer")
+    console.log(action.type)
+    switch(action.type) {
+        case PRODUCT_DETAILS_REQUEST:
+            // product details are loading. ...state is a "spread operator"
+            return { loading:true, ...state }
+
+        case PRODUCT_DETAILS_SUCCESS:
+            // the api call to get product details returned the data
+            return { loading:false, product:action.payload }
+
+        case PRODUCT_DETAILS_FAIL:
+            // the api call failed
+            return { loading:false, error: action.payload }
+
+        default:
+            // there are many other system action types, e.g. one for init
+            return state
+    }
+};
+
+In store.js, add the new reducer to the combined reducer.
+-----------
+const reducer = combineReducers({
+    productDetails: productDetailsReducer,
+    productList: productListReducer,
+});
+
+In ProductScreen.js, use the productAction, getProductDetails
+-------------------
+
+function ProductScreen() {
+    const params = useParams();
+    const dispatch = useDispatch()
+    const productDetails = useSelector(state => state.productDetails)
+    const {loading, error, product} = productDetails
+
+    useEffect(() => {
+        console.log("ProductScreen-UseEffect triggered");
+        console.log(`The id is ${params.id}`);
+        dispatch(getProductDetails(params.id))
+	}, [dispatch, params])
+	
+	return...
+	
+	
+For the returned JSX, use <Loader/> and <Message/>
+We also need to introduce a parent <div> so that the JSX has a "single parent".
+
+    return (
+        <div>
+            <Link to='/' classname='btn btn-light my-3'>Go Back</Link>
+            {loading ? 
+                <Loader />
+                : error 
+                    ? <Message variant='danger'>{error}</Message> 
+                    : <div id="parent1">
+                        <Row>
+                            ...
+                        </Row>
+                        <p>{product.name}</p>
+                    </div>
+            }
+        </div>
+  )
